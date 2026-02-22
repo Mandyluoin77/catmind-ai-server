@@ -7,21 +7,19 @@ dotenv.config();
 
 const app = express();
 
-/* ===== Middleware ===== */
 app.use(cors());
 app.use(express.json());
 
-/* ===== OpenAI ===== */
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* ===== Root Route (בדיקה שהשרת חי) ===== */
+// Root route (בדיקה שהשרת חי)
 app.get("/", (req, res) => {
   res.send("CatMind AI Server Running");
 });
 
-/* ===== AI Endpoint ===== */
+// ===== AI Endpoint =====
 app.post("/analyze", async (req, res) => {
 
   const { text } = req.body;
@@ -33,11 +31,11 @@ app.post("/analyze", async (req, res) => {
   try {
 
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: "gpt-4.1-mini",
       messages: [
         {
           role: "system",
-          content: "אתה וטרינר מומחה לחתולים. ענה בצורה מקצועית, קצרה וברורה."
+          content: "אתה וטרינר מנוסה. תן אבחון ראשוני קצר וברור. אם יש סימני חירום ציין זאת מיד."
         },
         {
           role: "user",
@@ -53,16 +51,16 @@ app.post("/analyze", async (req, res) => {
 
   } catch (error) {
 
-    console.error("AI Error:", error);
+    console.error("FULL ERROR:", error);
 
     res.status(500).json({
-      error: "AI failure"
+      error: error.message || "AI failure"
     });
   }
 });
 
-/* ===== PORT ===== */
-const PORT = process.env.PORT || 10000;
+// ===== PORT =====
+const PORT = process.env.PORT || 3000;
 
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
