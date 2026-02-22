@@ -11,10 +11,15 @@ app.use(cors());
 app.use(express.json());
 
 // ===== Gemini Init =====
+if (!process.env.GEMINI_API_KEY) {
+  console.error("GEMINI_API_KEY is missing!");
+  process.exit(1);
+}
+
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
-const model = model: "gemini-1.5-flash-latest"
-  model: "gemini-1.5-flash"
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash-latest"
 });
 
 // ===== Root Route =====
@@ -24,7 +29,6 @@ app.get("/", (req, res) => {
 
 // ===== Analyze Endpoint =====
 app.post("/analyze", async (req, res) => {
-
   const { text } = req.body;
 
   if (!text) {
@@ -32,15 +36,13 @@ app.post("/analyze", async (req, res) => {
   }
 
   try {
-
     const result = await model.generateContent(`
-אתה וטרינר מנוסה.
-תן אבחון ראשוני קצר וברור.
-אם יש סימני חירום ציין זאת מיד.
+אתה מומחה להתנהגות חתולים.
+ענה בעברית בצורה מקצועית וברורה.
 
-תיאור המצב:
+שאלה:
 ${text}
-`);
+    `);
 
     const response = result.response.text();
 
@@ -49,9 +51,7 @@ ${text}
     });
 
   } catch (error) {
-
     console.error("Gemini ERROR:", error);
-
     res.status(500).json({
       error: error.message || "AI failure"
     });
@@ -59,7 +59,7 @@ ${text}
 });
 
 // ===== PORT =====
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
   console.log("Server running on port " + PORT);
