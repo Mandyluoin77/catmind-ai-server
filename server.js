@@ -7,7 +7,7 @@ dotenv.config();
 
 const app = express();
 
-/* ===== חשוב: CORS ===== */
+/* ===== Middleware ===== */
 app.use(cors());
 app.use(express.json());
 
@@ -16,7 +16,7 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 });
 
-/* ===== בדיקת שרת ===== */
+/* ===== Root Route (בדיקה שהשרת חי) ===== */
 app.get("/", (req, res) => {
   res.send("CatMind AI Server Running");
 });
