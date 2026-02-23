@@ -10,30 +10,43 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
+/* =============================
+   בדיקת משתנה סביבה
+============================= */
 if (!process.env.GEMINI_API_KEY) {
   console.error("❌ GEMINI_API_KEY missing");
   process.exit(1);
 }
 
+console.log("✅ GEMINI_API_KEY detected");
+
+/* =============================
+   Health Check
+============================= */
 app.get("/", (req, res) => {
-  res.send("CatMind AI server running");
+  res.status(200).send("CatMind AI server is running");
 });
 
+/* =============================
+   Analyze Endpoint
+============================= */
 app.post("/analyze", async (req, res) => {
   try {
     const { text } = req.body;
 
     if (!text) {
-      return res.status(400).json({ error: "No text provided" });
+      return res.status(400).json({
+        error: "No text provided"
+      });
     }
 
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent",
+      "https://api.google.dev/v1beta/models/gemini-2.5-flash:generateContent",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-goog-api-key": process.env.GEMINI_API_KEY
+          "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`
         },
         body: JSON.stringify({
           contents: [
@@ -49,6 +62,7 @@ app.post("/analyze", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
+      console.error("🔥 Gemini API Error:", data);
       return res.status(500).json({
         error: "AI error",
         details: data
@@ -58,16 +72,22 @@ app.post("/analyze", async (req, res) => {
     const output =
       data.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
 
-    res.json({ result: output });
+    return res.json({
+      result: output
+    });
 
   } catch (err) {
-    res.status(500).json({
+    console.error("🔥 Server Error:", err);
+    return res.status(500).json({
       error: "Server error",
       details: err.message
     });
   }
 });
 
+/* =============================
+   Start Server
+============================= */
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Listening on port ${PORT}`);
 });
