@@ -21,7 +21,7 @@ app.get("/", (req, res) => {
   res.status(200).send("CatMind AI server is running");
 });
 
-app.post("/analyze", async (req, res) => {
+app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
 
