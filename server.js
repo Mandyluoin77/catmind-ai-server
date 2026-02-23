@@ -11,15 +11,25 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-if (!process.env.GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY not found in environment variables");
-  process.exit(1);
+// בדיקת משתנה סביבה (לא מפיל שרת)
+console.log("ENV CHECK:", process.env.GEMINI_API_KEY ? "FOUND" : "MISSING");
+
+let genAI = null;
+
+if (process.env.GEMINI_API_KEY) {
+  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 }
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+app.get("/", (req, res) => {
+  res.send("CatMind AI server is running");
+});
 
 app.post("/analyze", async (req, res) => {
   try {
+    if (!genAI) {
+      return res.status(500).json({ error: "API key not configured" });
+    }
+
     const { text } = req.body;
 
     if (!text) {
@@ -42,6 +52,6 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
