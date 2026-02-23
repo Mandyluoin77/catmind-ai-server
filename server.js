@@ -9,10 +9,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/*
-  Render מספק PORT דינמי.
-  אסור להשתמש בפורט קשיח.
-*/
 const PORT = process.env.PORT;
 
 if (!PORT) {
@@ -20,14 +16,13 @@ if (!PORT) {
   process.exit(1);
 }
 
-console.log("🔎 PORT from Render:", PORT);
-console.log("🔎 GEMINI KEY:", process.env.GEMINI_API_KEY ? "FOUND" : "MISSING");
+console.log("🔎 PORT:", PORT);
+console.log(
+  "🔎 GEMINI KEY:",
+  process.env.GEMINI_API_KEY ? "FOUND" : "MISSING"
+);
 
-let genAI = null;
-
-if (process.env.GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 /* ===== Health Check ===== */
 app.get("/", (req, res) => {
@@ -37,7 +32,7 @@ app.get("/", (req, res) => {
 /* ===== Analyze Endpoint ===== */
 app.post("/analyze", async (req, res) => {
   try {
-    if (!genAI) {
+    if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
         error: "GEMINI_API_KEY not configured"
       });
@@ -55,15 +50,28 @@ app.post("/analyze", async (req, res) => {
       model: "gemini-1.5-flash"
     });
 
-    const result = await model.generateContent(text);
-    const response = await result.response;
-    const output = response.text();
+    const result = await model.generateContent({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text }]
+        }
+      ]
+    });
 
-    res.json({ result: output });
+    const output = result.response.text();
+
+    return res.json({
+      result: output
+    });
 
   } catch (err) {
-    console.error("Gemini Error:", err);
-    res.status(500).json({ error: "AI error" });
+    console.error("🔥 FULL GEMINI ERROR:", err);
+
+    return res.status(500).json({
+      error: "AI error",
+      details: err.message
+    });
   }
 });
 
