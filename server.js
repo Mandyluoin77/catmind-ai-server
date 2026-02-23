@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 dotenv.config();
 
@@ -9,20 +8,14 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 
-if (!PORT) {
-  console.error("❌ PORT not provided by Render");
+if (!process.env.GEMINI_API_KEY) {
+  console.error("❌ GEMINI_API_KEY is missing");
   process.exit(1);
 }
 
-console.log("🔎 PORT:", PORT);
-console.log(
-  "🔎 GEMINI KEY:",
-  process.env.GEMINI_API_KEY ? "FOUND" : "MISSING"
-);
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+console.log("🔎 GEMINI KEY: FOUND");
 
 /* ===== Health Check ===== */
 app.get("/", (req, res) => {
@@ -32,12 +25,6 @@ app.get("/", (req, res) => {
 /* ===== Analyze Endpoint ===== */
 app.post("/analyze", async (req, res) => {
   try {
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({
-        error: "GEMINI_API_KEY not configured"
-      });
-    }
-
     const { text } = req.body;
 
     if (!text) {
@@ -46,30 +33,45 @@ app.post("/analyze", async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
-    });
+    const response = await fetch(
+      "https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-goog-api-key": process.env.GEMINI_API_KEY
+        },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text }]
+            }
+          ]
+        })
+      }
+    );
 
-    const result = await model.generateContent({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text }]
-        }
-      ]
-    });
+    const data = await response.json();
 
-    const output = result.response.text();
+    if (!response.ok) {
+      console.error("🔥 GEMINI API ERROR:", data);
+      return res.status(500).json({
+        error: "AI error",
+        details: data
+      });
+    }
 
-    return res.json({
-      result: output
-    });
+    const output =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "No response";
+
+    return res.json({ result: output });
 
   } catch (err) {
-    console.error("🔥 FULL GEMINI ERROR:", err);
-
+    console.error("🔥 SERVER ERROR:", err);
     return res.status(500).json({
-      error: "AI error",
+      error: "Server error",
       details: err.message
     });
   }
