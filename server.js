@@ -9,31 +9,27 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// בדיקת API KEY
 if (!process.env.GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY missing");
+  console.error("Missing GEMINI_API_KEY");
   process.exit(1);
 }
 
-// יצירת חיבור ל-Gemini
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 const model = genAI.getGenerativeModel({
-  model: "gemini-1.5-flash-latest"
+  model: "gemini-1.5-flash"
 });
 
-// בדיקת שרת
 app.get("/", (req, res) => {
-  res.json({ status: "OK", message: "Server running" });
+  res.json({ status: "OK" });
 });
 
-// יצירת טקסט
 app.post("/generate", async (req, res) => {
   try {
     const { prompt } = req.body;
 
     if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
+      return res.status(400).json({ error: "Prompt required" });
     }
 
     const result = await model.generateContent(prompt);
@@ -41,11 +37,14 @@ app.post("/generate", async (req, res) => {
 
     res.json({ output: text });
 
-  } catch (error) {
-    console.error("🔥 Gemini Error:", error);
-    res.status(500).json({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+});
