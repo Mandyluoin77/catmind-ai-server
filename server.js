@@ -10,9 +10,6 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 3000;
 
-/* =============================
-   בדיקת משתנה סביבה
-============================= */
 if (!process.env.GEMINI_API_KEY) {
   console.error("❌ GEMINI_API_KEY missing");
   process.exit(1);
@@ -20,16 +17,10 @@ if (!process.env.GEMINI_API_KEY) {
 
 console.log("✅ GEMINI_API_KEY detected");
 
-/* =============================
-   Health Check
-============================= */
 app.get("/", (req, res) => {
   res.status(200).send("CatMind AI server is running");
 });
 
-/* =============================
-   Analyze Endpoint
-============================= */
 app.post("/analyze", async (req, res) => {
   try {
     const { text } = req.body;
@@ -41,12 +32,12 @@ app.post("/analyze", async (req, res) => {
     }
 
     const response = await fetch(
-      "https://api.google.dev/v1beta/models/gemini-2.5-flash:generateContent",
+      "https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${process.env.GEMINI_API_KEY}`
+          "x-goog-api-key": process.env.GEMINI_API_KEY
         },
         body: JSON.stringify({
           contents: [
@@ -72,9 +63,7 @@ app.post("/analyze", async (req, res) => {
     const output =
       data.candidates?.[0]?.content?.parts?.[0]?.text || "No response";
 
-    return res.json({
-      result: output
-    });
+    return res.json({ result: output });
 
   } catch (err) {
     console.error("🔥 Server Error:", err);
@@ -85,9 +74,6 @@ app.post("/analyze", async (req, res) => {
   }
 });
 
-/* =============================
-   Start Server
-============================= */
 app.listen(PORT, "0.0.0.0", () => {
   console.log(`🚀 Listening on port ${PORT}`);
 });
