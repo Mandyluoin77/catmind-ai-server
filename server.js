@@ -10,37 +10,54 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
+/* בדיקת חיים */
 app.get("/", (req, res) => {
-    res.status(200).send("CatMind AI server is running!");
+    res.send("✅ CatMind AI Server is running");
 });
 
+/* Route עיקרי */
 app.post("/generate", async (req, res) => {
     try {
         const { text } = req.body;
-        if (!text) return res.status(400).json({ error: "No text provided" });
+        if (!text) {
+            return res.status(400).json({ error: "No text provided" });
+        }
 
-        console.log(`🔍 מנתח סימפטום: ${text}`);
+        console.log("🔍 Analyzing:", text);
 
-        // הכתובת המדויקת עם הסיומת -latest שפותרת את שגיאת ה-404
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
         const response = await fetch(url, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json"
+            },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: `אתה וטרינר מומחה. נתח את הסימפטום הבא של חתול בעברית: ${text}` }] }]
-            }),
+                contents: [
+                    {
+                        parts: [
+                            {
+                                text: `נתח סימפטום של חתול בעברית ותן תשובה מקצועית וברורה: ${text}`
+                            }
+                        ]
+                    }
+                ]
+            })
         });
 
         const data = await response.json();
 
-        // בדיקה אם גוגל החזירה שגיאה
-        if (data.error) {
-            console.error("💥 Gemini API Error:", data.error);
-            return res.status(500).json({ error: data.error.message });
+        if (!response.ok) {
+            console.error("💥 Google API Error:", data);
+            return res.status(response.status).json({
+                error: data.error?.message || "Google API error"
+            });
         }
 
-        const output = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא התקבלה תשובה מה-AI.";
+        const output =
+            data.candidates?.[0]?.content?.parts?.[0]?.text ||
+            "לא התקבלה תשובה.";
+
         res.json({ result: output });
 
     } catch (err) {
@@ -49,6 +66,6 @@ app.post("/generate", async (req, res) => {
     }
 });
 
-app.listen(PORT, '0.0.0.0', () => {
+app.listen(PORT, "0.0.0.0", () => {
     console.log(`🚀 Server live on port ${PORT}`);
 });
