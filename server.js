@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
-console.log("🔥 CatMind AI SDK VERSION ACTIVE");
+console.log("🔥 NEW GEMINI SDK ACTIVE");
 
 const app = express();
 app.use(cors());
@@ -13,12 +13,14 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-/* בדיקת חיים */
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY
+});
+
 app.get("/", (req, res) => {
   res.send("CatMind AI Server is running");
 });
 
-/* Route עיקרי */
 app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
@@ -27,27 +29,15 @@ app.post("/generate", async (req, res) => {
       return res.status(400).json({ error: "No text provided" });
     }
 
-    if (!process.env.GEMINI_API_KEY) {
-      return res.status(500).json({ error: "Missing GEMINI_API_KEY in environment variables" });
-    }
-
-    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-    const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash"
+    const response = await ai.models.generateContent({
+      model: "gemini-1.5-flash",
+      contents: `נתח סימפטום של חתול בעברית ותן תשובה מקצועית וברורה: ${text}`
     });
 
-    const result = await model.generateContent(
-      `נתח סימפטום של חתול בעברית ותן תשובה מקצועית וברורה: ${text}`
-    );
-
-    const response = await result.response;
-    const output = response.text();
-
-    res.json({ result: output });
+    res.json({ result: response.text });
 
   } catch (err) {
-    console.error("💥 Server Error:", err);
+    console.error("Server Error:", err);
     res.status(500).json({ error: err.message });
   }
 });
