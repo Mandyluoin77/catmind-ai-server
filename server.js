@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND VERSION – CAT ONLY MODE");
+console.log("🚀 CATMIND STRICT CAT MODE");
 
 const app = express();
 app.use(cors());
@@ -19,7 +19,7 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI ACTIVE 🐱");
+  res.send("CATMIND AI – STRICT CAT MODE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
@@ -29,6 +29,23 @@ app.post("/generate", async (req, res) => {
     if (!text) {
       return res.status(400).json({ error: "Missing text" });
     }
+
+    const strictPrompt = `
+אתה וטרינר קליני מומחה לחתולים בלבד.
+
+חוקי חובה:
+- אסור להתייחס לבני אדם.
+- אם המונח רפואי כללי – התייחס אליו בהקשר של חתול בלבד.
+- אם אינך בטוח – ציין שמדובר בהקשר וטרינרי של חתולים.
+
+פורמט חובה:
+כותרת: <שם הסימפטום אצל חתולים>
+גורמים אפשריים:
+רמת דחיפות:
+מה מומלץ לעשות:
+
+שאלה: ${text}
+`;
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -41,22 +58,7 @@ app.post("/generate", async (req, res) => {
           contents: [
             {
               role: "user",
-              parts: [
-                {
-                  text: `
-אתה וטרינר מומחה לחתולים בלבד.
-ענה אך ורק לגבי חתולים.
-אל תתייחס לבני אדם.
-ציין:
-1. גורמים אפשריים
-2. רמת דחיפות
-3. מה מומלץ לעשות
-
-שאלה:
-${text}
-                  `
-                }
-              ]
+              parts: [{ text: strictPrompt }]
             }
           ]
         })
@@ -83,5 +85,5 @@ ${text}
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 CAT GEMINI ACTIVE - MODEL:", MODEL);
+  console.log("🐱 STRICT CAT GEMINI ACTIVE - MODEL:", MODEL);
 });
