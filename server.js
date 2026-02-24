@@ -15,9 +15,10 @@ app.post("/generate", async (req, res) => {
         const { text } = req.body;
         if (!text) return res.status(400).json({ error: "No text provided" });
 
-        // התיקון הקריטי: הוספת הקידומת 'publishers/google/models/' 
-        // זה מה שגוגל דורשת עכשיו עבור גרסת ה-Flash
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        console.log(`🔍 Analyzing: ${text}`);
+
+        // הכתובת המדויקת והמעודכנת ביותר של גוגל
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
         const response = await fetch(url, {
             method: "POST",
@@ -30,18 +31,19 @@ app.post("/generate", async (req, res) => {
         const data = await response.json();
 
         if (data.error) {
-            console.error("Google API Error:", data.error);
-            return res.status(500).json({ error: data.error.message });
+            console.error("💥 Google API Error:", data.error);
+            return res.status(data.error.code || 500).json({ error: data.error.message });
         }
 
         const output = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא התקבלה תשובה.";
         res.json({ result: output });
 
     } catch (err) {
+        console.error("💥 Server Error:", err);
         res.status(500).json({ error: "Internal Server Error" });
     }
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server is live on port ${PORT}`);
+    console.log(`🚀 Server live on port ${PORT}`);
 });
