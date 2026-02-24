@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 VERSION CLEAN 2.5 FLASH");
+console.log("🚀 CATMIND VERSION – CAT ONLY MODE");
 
 const app = express();
 app.use(cors());
@@ -19,7 +19,7 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("SERVER 2.5 FLASH ACTIVE");
+  res.send("CATMIND AI ACTIVE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
@@ -29,8 +29,6 @@ app.post("/generate", async (req, res) => {
     if (!text) {
       return res.status(400).json({ error: "Missing text" });
     }
-
-    console.log("📤 MODEL IN USE:", MODEL);
 
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
@@ -42,7 +40,23 @@ app.post("/generate", async (req, res) => {
         body: JSON.stringify({
           contents: [
             {
-              parts: [{ text }]
+              role: "user",
+              parts: [
+                {
+                  text: `
+אתה וטרינר מומחה לחתולים בלבד.
+ענה אך ורק לגבי חתולים.
+אל תתייחס לבני אדם.
+ציין:
+1. גורמים אפשריים
+2. רמת דחיפות
+3. מה מומלץ לעשות
+
+שאלה:
+${text}
+                  `
+                }
+              ]
             }
           ]
         })
@@ -69,5 +83,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🔥 GEMINI REST ACTIVE - MODEL:", MODEL);
+  console.log("🐱 CAT GEMINI ACTIVE - MODEL:", MODEL);
 });
