@@ -2,6 +2,8 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
+console.log("🔥 VERSION 5 ACTIVE");
+
 dotenv.config();
 
 const app = express();
