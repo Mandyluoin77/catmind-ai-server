@@ -10,9 +10,9 @@ app.use(express.json());
 
 const PORT = process.env.PORT || 10000;
 
-// בדיקת מפתח
+// בדיקת מפתח API
 if (!process.env.GEMINI_API_KEY) {
-    console.error("❌ GEMINI_API_KEY missing from environment variables");
+    console.error("❌ GEMINI_API_KEY missing");
 } else {
     console.log("✅ GEMINI_API_KEY detected");
 }
@@ -28,26 +28,29 @@ app.post("/generate", async (req, res) => {
 
         console.log(`🔍 Analyzing: ${text}`);
 
-        // שימוש בכתובת v1 היציבה - זה הפתרון לשגיאת ה-404 שראינו בלוגים
-        const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
+        // הכתובת המדויקת עבור מודל ה-Flash בגרסה v1beta
+        // שים לב: המודל חייב להיקרא gemini-1.5-flash-latest או gemini-1.5-flash
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`;
 
         const response = await fetch(url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                contents: [{ parts: [{ text: `נתח סימפטום של חתול בעברית: ${text}` }] }]
+                contents: [{ 
+                    parts: [{ text: `אתה וטרינר מומחה. נתח את הבעיה הבאה בחתול ותן המלצות ורמת דחיפות בעברית: ${text}` }] 
+                }]
             }),
         });
 
         const data = await response.json();
 
-        // בדיקה אם גוגל החזירה שגיאה
+        // אם גוגל מחזירה שגיאה
         if (data.error) {
-            console.error("💥 Gemini API Error:", data.error);
-            return res.status(500).json({ error: "AI Service Error", details: data.error.message });
+            console.error("💥 Google API Error:", data.error);
+            return res.status(data.error.code || 500).json({ error: data.error.message });
         }
 
-        const output = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא התקבלה תשובה מה-AI.";
+        const output = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא התקבלה תשובה.";
         res.json({ result: output });
 
     } catch (err) {
@@ -57,5 +60,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(PORT, '0.0.0.0', () => {
-    console.log(`🚀 Server is live on port ${PORT}`);
+    console.log(`🚀 Server live on port ${PORT}`);
 });
