@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE");
+console.log("🚀 CATMIND STRICT CAT MODE - STREAMING");
 
 const app = express();
 app.use(cors());
@@ -19,7 +19,7 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – STRICT CAT MODE 🐱");
+  res.send("CATMIND AI – STRICT CAT MODE 🐱 STREAMING ACTIVE");
 });
 
 app.post("/generate", async (req, res) => {
@@ -27,7 +27,7 @@ app.post("/generate", async (req, res) => {
     const { text } = req.body;
 
     if (!text) {
-      return res.status(400).json({ error: "Missing text" });
+      return res.status(400).end("Missing text");
     }
 
     const strictPrompt = `
@@ -44,11 +44,17 @@ app.post("/generate", async (req, res) => {
 רמת דחיפות:
 מה מומלץ לעשות:
 
+השב בצורה תמציתית וברורה (עד 8 שורות לכל סעיף).
+
 שאלה: ${text}
 `;
 
+    // Headers ל-Streaming
+    res.setHeader("Content-Type", "text/plain; charset=utf-8");
+    res.setHeader("Transfer-Encoding", "chunked");
+
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
         headers: {
@@ -60,30 +66,40 @@ app.post("/generate", async (req, res) => {
               role: "user",
               parts: [{ text: strictPrompt }]
             }
-          ]
+          ],
+          generationConfig: {
+            maxOutputTokens: 600,
+            temperature: 0.4
+          }
         })
       }
     );
 
-    const data = await response.json();
-
     if (!response.ok) {
-      console.error("❌ Gemini Error:", data);
-      return res.status(500).json(data);
+      const errText = await response.text();
+      console.error("❌ Gemini Stream Error:", errText);
+      return res.status(500).end("Gemini error");
     }
 
-    const output =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response";
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
 
-    res.json({ result: output });
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      res.write(chunk);
+    }
+
+    res.end();
 
   } catch (err) {
     console.error("🔥 Server error:", err);
-    res.status(500).json({ error: err.message });
+    res.status(500).end("Server error");
   }
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 STRICT CAT GEMINI ACTIVE - MODEL:", MODEL);
+  console.log("🐱 STRICT CAT GEMINI STREAMING ACTIVE - MODEL:", MODEL);
 });
