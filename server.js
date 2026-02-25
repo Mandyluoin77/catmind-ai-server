@@ -4,6 +4,8 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+console.log("🚀 CATMIND STRICT CAT MODE");
+
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -11,45 +13,54 @@ app.use(express.json());
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = "gemini-2.5-flash";
 
+if (!GEMINI_API_KEY) {
+  console.error("❌ GEMINI_API_KEY missing!");
+  process.exit(1);
+}
+
+app.get("/", (req, res) => {
+  res.send("CATMIND AI – STRICT CAT MODE 🐱");
+});
+
 app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text) return res.status(400).json({ error: "Missing text" });
 
-    const prompt = `
+    if (!text) {
+      return res.status(400).json({ error: "Missing text" });
+    }
+
+    const strictPrompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
 
-ענה בעברית בלבד בצורה מפורטת וברורה.
+חוקי חובה:
+- אסור להתייחס לבני אדם.
+- אם המונח רפואי כללי – התייחס אליו בהקשר של חתול בלבד.
+- אם אינך בטוח – ציין שמדובר בהקשר וטרינרי של חתולים.
 
-מבנה התשובה חייב להיות כך:
-
-## כותרת הבעיה
-
-### גורמים אפשריים
-הסבר מפורט.
-
-### רמת דחיפות
-האם זה מצב חירום או לא ולמה.
-
-### מה מומלץ לעשות
-הנחיות ברורות לבעל החתול.
+פורמט חובה:
+כותרת: <שם הסימפטום אצל חתולים>
+גורמים אפשריים:
+רמת דחיפות:
+מה מומלץ לעשות:
 
 שאלה: ${text}
 `;
 
     const response = await fetch(
-      \`https://generativelanguage.googleapis.com/v1beta/models/\${MODEL}:generateContent?key=\${GEMINI_API_KEY}\`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           contents: [
-            { role: "user", parts: [{ text: prompt }] }
-          ],
-          generationConfig: {
-            temperature: 0.6,
-            maxOutputTokens: 1200
-          }
+            {
+              role: "user",
+              parts: [{ text: strictPrompt }]
+            }
+          ]
         })
       }
     );
@@ -57,20 +68,22 @@ app.post("/generate", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(500).json({ error: "Model error" });
+      console.error("❌ Gemini Error:", data);
+      return res.status(500).json(data);
     }
 
     const output =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "לא התקבלה תשובה.";
+      "No response";
 
     res.json({ result: output });
 
   } catch (err) {
-    res.status(500).json({ error: "Server failure" });
+    console.error("🔥 Server error:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("CatMind server running");
+  console.log("🐱 STRICT CAT GEMINI ACTIVE - MODEL:", MODEL);
 });
