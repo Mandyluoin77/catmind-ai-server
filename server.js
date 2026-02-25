@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND SSE STREAM FIX");
+console.log("🚀 CATMIND FAST MODE");
 
 const app = express();
 app.use(cors());
@@ -19,97 +19,70 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND STREAM FIX ACTIVE 🐱");
+  res.send("CATMIND FAST MODE ACTIVE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text) return res.status(400).end("Missing text");
+    if (!text) return res.status(400).json({ error: "Missing text" });
 
     const strictPrompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
 
-פורמט חובה:
+השב בפורמט הבא בלבד:
+
 כותרת:
 גורמים אפשריים:
 רמת דחיפות:
 מה מומלץ לעשות:
 
-השב בצורה תמציתית וברורה.
+השב בצורה תמציתית (עד 6–8 שורות לכל סעיף).
 
 שאלה: ${text}
 `;
 
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Transfer-Encoding", "chunked");
-
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?key=${GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           contents: [
-            { role: "user", parts: [{ text: strictPrompt }] }
+            {
+              role: "user",
+              parts: [{ text: strictPrompt }]
+            }
           ],
           generationConfig: {
-            maxOutputTokens: 600,
-            temperature: 0.4
+            maxOutputTokens: 500,
+            temperature: 0.3
           }
         })
       }
     );
 
+    const data = await response.json();
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("❌ Gemini error:", errorText);
-      return res.status(500).end("Gemini error");
+      console.error("❌ Gemini Error:", data);
+      return res.status(500).json(data);
     }
 
-    const reader = response.body.getReader();
-    const decoder = new TextDecoder();
+    const output =
+      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      "No response";
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-
-      // Gemini שולח SSE: data: {json}
-      const lines = chunk.split("\n");
-
-      for (let line of lines) {
-        line = line.trim();
-
-        if (!line.startsWith("data:")) continue;
-
-        const jsonString = line.replace("data:", "").trim();
-
-        if (jsonString === "[DONE]") continue;
-
-        try {
-          const parsed = JSON.parse(jsonString);
-          const textChunk =
-            parsed.candidates?.[0]?.content?.parts?.[0]?.text;
-
-          if (textChunk) {
-            res.write(textChunk);
-          }
-        } catch (err) {
-          // מתעלמים מ-chunks חלקיים
-        }
-      }
-    }
-
-    res.end();
+    res.json({ result: output });
 
   } catch (err) {
     console.error("🔥 Server error:", err);
-    res.status(500).end("Server error");
+    res.status(500).json({ error: err.message });
   }
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 GEMINI SSE STREAM ACTIVE - MODEL:", MODEL);
+  console.log("🐱 GEMINI FAST ACTIVE - MODEL:", MODEL);
 });
