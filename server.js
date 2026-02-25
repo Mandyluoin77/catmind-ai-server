@@ -33,16 +33,14 @@ app.post("/generate", async (req, res) => {
 
 חוקים מחייבים:
 - כתוב בעברית בלבד.
-- אסור להשתמש באנגלית.
-- אסור להוסיף תרגום לאנגלית.
-- אסור לכתוב מונחים באנגלית בסוגריים.
-- התייחס לחתולים בלבד.
+- אל תוסיף תרגומים.
+- אל תכתוב הסברים באנגלית.
 - כתוב בצורה מקצועית וברורה.
 - אל תכתוב הקדמות מיותרות.
 
 החזר תשובה בפורמט Markdown תקני:
 
-## <שם הבעיה בעברית בלבד>
+## <שם הבעיה>
 
 ### גורמים אפשריים:
 - סעיף
@@ -87,9 +85,15 @@ app.post("/generate", async (req, res) => {
       return res.status(500).json({ error: "Model error" });
     }
 
-    const output =
+    let output =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
       "לא התקבלה תשובה.";
+
+    // 🔥 ניקוי סוגריים (למשל דיספנאה)
+    output = output.replace(/\s*\(.*?\)/g, "");
+
+    // 🔥 ניקוי מילים באנגלית אם נשארו בטעות
+    output = output.replace(/[A-Za-z]/g, "");
 
     res.json({ result: output });
 
