@@ -4,8 +4,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE");
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -19,7 +17,7 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – STRICT CAT MODE 🐱");
+  res.send("CatMind AI Server Active 🐱");
 });
 
 app.post("/generate", async (req, res) => {
@@ -33,19 +31,22 @@ app.post("/generate", async (req, res) => {
     const strictPrompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
 
-חוקים:
-- לעולם אל תתייחס לבני אדם.
-- תמיד התייחס לחתולים בלבד.
-- אם יש ספק רפואי – ציין זאת.
-- כתוב בעברית מקצועית וברורה.
+חוקים מחייבים:
+- כתוב בעברית בלבד.
+- אסור להשתמש באנגלית.
+- אסור להוסיף תרגום לאנגלית.
+- אסור לכתוב מונחים באנגלית בסוגריים.
+- התייחס לחתולים בלבד.
+- כתוב בצורה מקצועית וברורה.
+- אל תכתוב הקדמות מיותרות.
 
-החזר תשובה בפורמט Markdown תקני בלבד:
+החזר תשובה בפורמט Markdown תקני:
 
-## <שם הבעיה>
+## <שם הבעיה בעברית בלבד>
 
 ### גורמים אפשריים:
-- סעיף 1
-- סעיף 2
+- סעיף
+- סעיף
 
 ### רמת דחיפות:
 טקסט ברור
@@ -72,7 +73,7 @@ app.post("/generate", async (req, res) => {
           ],
           generationConfig: {
             temperature: 0.4,
-            maxOutputTokens: 800,
+            maxOutputTokens: 900,
             topP: 0.9
           }
         })
@@ -82,22 +83,22 @@ app.post("/generate", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("❌ Gemini Error:", data);
-      return res.status(500).json(data);
+      console.error("Gemini Error:", data);
+      return res.status(500).json({ error: "Model error" });
     }
 
     const output =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "לא התקבלה תשובה מהמודל.";
+      "לא התקבלה תשובה.";
 
     res.json({ result: output });
 
   } catch (err) {
-    console.error("🔥 Server error:", err);
-    res.status(500).json({ error: err.message });
+    console.error("Server error:", err);
+    res.status(500).json({ error: "Server failure" });
   }
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 STRICT CAT GEMINI ACTIVE - MODEL:", MODEL);
+  console.log("🐱 CatMind Server Running - MODEL:", MODEL);
 });
