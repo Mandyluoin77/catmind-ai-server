@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND FAST MODE");
+console.log("🚀 CATMIND STABLE MODE");
 
 const app = express();
 app.use(cors());
@@ -19,7 +19,7 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND FAST MODE ACTIVE 🐱");
+  res.send("CATMIND STABLE ACTIVE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
@@ -27,7 +27,7 @@ app.post("/generate", async (req, res) => {
     const { text } = req.body;
     if (!text) return res.status(400).json({ error: "Missing text" });
 
-    const strictPrompt = `
+    const prompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
 
 השב בפורמט הבא בלבד:
@@ -37,7 +37,7 @@ app.post("/generate", async (req, res) => {
 רמת דחיפות:
 מה מומלץ לעשות:
 
-השב בצורה תמציתית (עד 6–8 שורות לכל סעיף).
+השב בצורה תמציתית וברורה (עד 6–8 שורות לכל סעיף).
 
 שאלה: ${text}
 `;
@@ -46,15 +46,10 @@ app.post("/generate", async (req, res) => {
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [
-            {
-              role: "user",
-              parts: [{ text: strictPrompt }]
-            }
+            { role: "user", parts: [{ text: prompt }] }
           ],
           generationConfig: {
             maxOutputTokens: 500,
@@ -73,7 +68,7 @@ app.post("/generate", async (req, res) => {
 
     const output =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "No response";
+      "לא התקבלה תשובה.";
 
     res.json({ result: output });
 
@@ -84,5 +79,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 GEMINI FAST ACTIVE - MODEL:", MODEL);
+  console.log("🐱 GEMINI STABLE ACTIVE - MODEL:", MODEL);
 });
