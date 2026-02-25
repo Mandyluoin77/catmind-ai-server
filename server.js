@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE - STREAMING");
+console.log("🚀 CATMIND STRICT CAT MODE - CLEAN STREAM");
 
 const app = express();
 app.use(cors());
@@ -19,16 +19,13 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – STRICT CAT MODE 🐱 STREAMING ACTIVE");
+  res.send("CATMIND AI – STREAMING ACTIVE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
-
-    if (!text) {
-      return res.status(400).end("Missing text");
-    }
+    if (!text) return res.status(400).end("Missing text");
 
     const strictPrompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
@@ -36,20 +33,19 @@ app.post("/generate", async (req, res) => {
 חוקי חובה:
 - אסור להתייחס לבני אדם.
 - אם המונח רפואי כללי – התייחס אליו בהקשר של חתול בלבד.
-- אם אינך בטוח – ציין שמדובר בהקשר וטרינרי של חתולים.
 
 פורמט חובה:
-כותרת: <שם הסימפטום אצל חתולים>
+כותרת:
 גורמים אפשריים:
 רמת דחיפות:
 מה מומלץ לעשות:
 
-השב בצורה תמציתית וברורה (עד 8 שורות לכל סעיף).
+השב בצורה תמציתית וברורה.
 
 שאלה: ${text}
 `;
 
-    // Headers ל-Streaming
+    // Headers ל-Streaming תקין
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Transfer-Encoding", "chunked");
 
@@ -57,15 +53,10 @@ app.post("/generate", async (req, res) => {
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:streamGenerateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [
-            {
-              role: "user",
-              parts: [{ text: strictPrompt }]
-            }
+            { role: "user", parts: [{ text: strictPrompt }] }
           ],
           generationConfig: {
             maxOutputTokens: 600,
@@ -76,20 +67,40 @@ app.post("/generate", async (req, res) => {
     );
 
     if (!response.ok) {
-      const errText = await response.text();
-      console.error("❌ Gemini Stream Error:", errText);
+      const errorText = await response.text();
+      console.error("❌ Gemini error:", errorText);
       return res.status(500).end("Gemini error");
     }
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let buffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      const chunk = decoder.decode(value);
-      res.write(chunk);
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split("\n");
+      buffer = lines.pop(); // שומר שורה חלקית
+
+      for (const line of lines) {
+        if (!line.trim()) continue;
+
+        try {
+          const parsed = JSON.parse(line);
+
+          const textChunk =
+            parsed.candidates?.[0]?.content?.parts?.[0]?.text;
+
+          if (textChunk) {
+            res.write(textChunk);
+          }
+        } catch {
+          // מתעלם משורות JSON לא שלמות
+        }
+      }
     }
 
     res.end();
@@ -101,5 +112,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 STRICT CAT GEMINI STREAMING ACTIVE - MODEL:", MODEL);
+  console.log("🐱 GEMINI STREAM CLEAN ACTIVE - MODEL:", MODEL);
 });
