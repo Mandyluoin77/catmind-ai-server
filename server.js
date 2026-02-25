@@ -16,10 +16,6 @@ if (!GEMINI_API_KEY) {
   process.exit(1);
 }
 
-app.get("/", (req, res) => {
-  res.send("CatMind AI Server Active 🐱");
-});
-
 app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
@@ -28,29 +24,25 @@ app.post("/generate", async (req, res) => {
       return res.status(400).json({ error: "Missing text" });
     }
 
-    const strictPrompt = `
+    const prompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
 
-חוקים מחייבים:
-- כתוב בעברית בלבד.
-- אל תוסיף תרגומים.
-- אל תכתוב הסברים באנגלית.
-- כתוב בצורה מקצועית וברורה.
-- אל תכתוב הקדמות מיותרות.
+כתוב תשובה מפורטת, מקצועית וברורה בעברית בלבד.
 
-החזר תשובה בפורמט Markdown תקני:
+אל תתרגם לאנגלית ואל תוסיף תרגום בסוגריים.
 
-## <שם הבעיה>
+החזר תשובה בפורמט Markdown:
+
+## <שם הבעיה בעברית>
 
 ### גורמים אפשריים:
-- סעיף
-- סעיף
+פירוט עם הסבר לכל גורם.
 
 ### רמת דחיפות:
-טקסט ברור
+הסבר ברור האם מדובר במצב חירום או לא.
 
 ### מה מומלץ לעשות:
-טקסט ברור ומעשי
+הנחיות מעשיות וברורות לבעל החתול.
 
 שאלה: ${text}
 `;
@@ -66,12 +58,12 @@ app.post("/generate", async (req, res) => {
           contents: [
             {
               role: "user",
-              parts: [{ text: strictPrompt }]
+              parts: [{ text: prompt }]
             }
           ],
           generationConfig: {
-            temperature: 0.4,
-            maxOutputTokens: 900,
+            temperature: 0.5,
+            maxOutputTokens: 1100,
             topP: 0.9
           }
         })
@@ -81,28 +73,20 @@ app.post("/generate", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("Gemini Error:", data);
       return res.status(500).json({ error: "Model error" });
     }
 
-    let output =
+    const output =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
       "לא התקבלה תשובה.";
-
-    // 🔥 ניקוי סוגריים (למשל דיספנאה)
-    output = output.replace(/\s*\(.*?\)/g, "");
-
-    // 🔥 ניקוי מילים באנגלית אם נשארו בטעות
-    output = output.replace(/[A-Za-z]/g, "");
 
     res.json({ result: output });
 
   } catch (err) {
-    console.error("Server error:", err);
     res.status(500).json({ error: "Server failure" });
   }
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 CatMind Server Running - MODEL:", MODEL);
+  console.log("🐱 CatMind Server Running");
 });
