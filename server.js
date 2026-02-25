@@ -11,60 +11,44 @@ app.use(express.json());
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const MODEL = "gemini-2.5-flash";
 
-if (!GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY missing!");
-  process.exit(1);
-}
-
 app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
-
-    if (!text) {
-      return res.status(400).json({ error: "Missing text" });
-    }
+    if (!text) return res.status(400).json({ error: "Missing text" });
 
     const prompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
 
-כתוב תשובה מפורטת, מקצועית וברורה בעברית בלבד.
+ענה בעברית בלבד בצורה מפורטת וברורה.
 
-אל תתרגם לאנגלית ואל תוסיף תרגום בסוגריים.
+מבנה התשובה חייב להיות כך:
 
-החזר תשובה בפורמט Markdown:
+## כותרת הבעיה
 
-## <שם הבעיה בעברית>
+### גורמים אפשריים
+הסבר מפורט.
 
-### גורמים אפשריים:
-פירוט עם הסבר לכל גורם.
+### רמת דחיפות
+האם זה מצב חירום או לא ולמה.
 
-### רמת דחיפות:
-הסבר ברור האם מדובר במצב חירום או לא.
-
-### מה מומלץ לעשות:
-הנחיות מעשיות וברורות לבעל החתול.
+### מה מומלץ לעשות
+הנחיות ברורות לבעל החתול.
 
 שאלה: ${text}
 `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      \`https://generativelanguage.googleapis.com/v1beta/models/\${MODEL}:generateContent?key=\${GEMINI_API_KEY}\`,
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [
-            {
-              role: "user",
-              parts: [{ text: prompt }]
-            }
+            { role: "user", parts: [{ text: prompt }] }
           ],
           generationConfig: {
-            temperature: 0.5,
-            maxOutputTokens: 1100,
-            topP: 0.9
+            temperature: 0.6,
+            maxOutputTokens: 1200
           }
         })
       }
@@ -88,5 +72,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 CatMind Server Running");
+  console.log("CatMind server running");
 });
