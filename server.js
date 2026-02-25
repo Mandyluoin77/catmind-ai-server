@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STABLE MODE");
+console.log("🚀 CATMIND STRICT CAT MODE");
 
 const app = express();
 app.use(cors());
@@ -19,25 +19,39 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND STABLE ACTIVE 🐱");
+  res.send("CATMIND AI – STRICT CAT MODE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
   try {
     const { text } = req.body;
-    if (!text) return res.status(400).json({ error: "Missing text" });
 
-    const prompt = `
+    if (!text) {
+      return res.status(400).json({ error: "Missing text" });
+    }
+
+    const strictPrompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
 
-השב בפורמט הבא בלבד:
+חוקים:
+- לעולם אל תתייחס לבני אדם.
+- תמיד התייחס לחתולים בלבד.
+- אם יש ספק רפואי – ציין זאת.
+- כתוב בעברית מקצועית וברורה.
 
-כותרת:
-גורמים אפשריים:
-רמת דחיפות:
-מה מומלץ לעשות:
+החזר תשובה בפורמט Markdown תקני בלבד:
 
-השב בצורה תמציתית וברורה (עד 6–8 שורות לכל סעיף).
+## <שם הבעיה>
+
+### גורמים אפשריים:
+- סעיף 1
+- סעיף 2
+
+### רמת דחיפות:
+טקסט ברור
+
+### מה מומלץ לעשות:
+טקסט ברור ומעשי
 
 שאלה: ${text}
 `;
@@ -46,14 +60,20 @@ app.post("/generate", async (req, res) => {
       `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json"
+        },
         body: JSON.stringify({
           contents: [
-            { role: "user", parts: [{ text: prompt }] }
+            {
+              role: "user",
+              parts: [{ text: strictPrompt }]
+            }
           ],
           generationConfig: {
-            maxOutputTokens: 500,
-            temperature: 0.3
+            temperature: 0.4,
+            maxOutputTokens: 800,
+            topP: 0.9
           }
         })
       }
@@ -68,7 +88,7 @@ app.post("/generate", async (req, res) => {
 
     const output =
       data.candidates?.[0]?.content?.parts?.[0]?.text ||
-      "לא התקבלה תשובה.";
+      "לא התקבלה תשובה מהמודל.";
 
     res.json({ result: output });
 
@@ -79,5 +99,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 GEMINI STABLE ACTIVE - MODEL:", MODEL);
+  console.log("🐱 STRICT CAT GEMINI ACTIVE - MODEL:", MODEL);
 });
