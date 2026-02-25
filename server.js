@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE - CLEAN STREAM");
+console.log("🚀 CATMIND SSE STREAM FIX");
 
 const app = express();
 app.use(cors());
@@ -19,7 +19,7 @@ if (!GEMINI_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – STREAMING ACTIVE 🐱");
+  res.send("CATMIND STREAM FIX ACTIVE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
@@ -29,10 +29,6 @@ app.post("/generate", async (req, res) => {
 
     const strictPrompt = `
 אתה וטרינר קליני מומחה לחתולים בלבד.
-
-חוקי חובה:
-- אסור להתייחס לבני אדם.
-- אם המונח רפואי כללי – התייחס אליו בהקשר של חתול בלבד.
 
 פורמט חובה:
 כותרת:
@@ -45,7 +41,6 @@ app.post("/generate", async (req, res) => {
 שאלה: ${text}
 `;
 
-    // Headers ל-Streaming תקין
     res.setHeader("Content-Type", "text/plain; charset=utf-8");
     res.setHeader("Transfer-Encoding", "chunked");
 
@@ -74,31 +69,35 @@ app.post("/generate", async (req, res) => {
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
-    let buffer = "";
 
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
-      buffer += decoder.decode(value, { stream: true });
+      const chunk = decoder.decode(value, { stream: true });
 
-      const lines = buffer.split("\n");
-      buffer = lines.pop(); // שומר שורה חלקית
+      // Gemini שולח SSE: data: {json}
+      const lines = chunk.split("\n");
 
-      for (const line of lines) {
-        if (!line.trim()) continue;
+      for (let line of lines) {
+        line = line.trim();
+
+        if (!line.startsWith("data:")) continue;
+
+        const jsonString = line.replace("data:", "").trim();
+
+        if (jsonString === "[DONE]") continue;
 
         try {
-          const parsed = JSON.parse(line);
-
+          const parsed = JSON.parse(jsonString);
           const textChunk =
             parsed.candidates?.[0]?.content?.parts?.[0]?.text;
 
           if (textChunk) {
             res.write(textChunk);
           }
-        } catch {
-          // מתעלם משורות JSON לא שלמות
+        } catch (err) {
+          // מתעלמים מ-chunks חלקיים
         }
       }
     }
@@ -112,5 +111,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 GEMINI STREAM CLEAN ACTIVE - MODEL:", MODEL);
+  console.log("🐱 GEMINI SSE STREAM ACTIVE - MODEL:", MODEL);
 });
