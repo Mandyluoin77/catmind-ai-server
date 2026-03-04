@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND PRO MODE");
+console.log("🚀 CATMIND STRICT CAT MODE (GROQ)");
 
 const app = express();
 app.use(cors());
@@ -19,13 +19,11 @@ if (!GROQ_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI PRO 🐱");
+  res.send("CATMIND AI – STRICT CAT MODE 🐱 (GROQ)");
 });
 
 app.post("/generate", async (req, res) => {
-
   try {
-
     const { text } = req.body;
 
     if (!text) {
@@ -33,17 +31,20 @@ app.post("/generate", async (req, res) => {
     }
 
     const strictPrompt = `
-אתה וטרינר מומחה לחתולים בלבד.
+אתה וטרינר קליני מומחה לחתולים בלבד.
 
-נתח את הסימפטומים.
+חוקים:
+- התייחס רק לחתולים.
+- אם המידע לא מספיק ציין זאת.
+- אל תדבר על בני אדם.
 
-החזר JSON בלבד:
+החזר תשובה בפורמט JSON בלבד:
 
 {
-"title": "",
-"possible_causes": [],
+"title": "שם הבעיה אצל חתולים",
+"possible_causes": ["גורם 1","גורם 2","גורם 3"],
 "urgency_level": "Low | Medium | High | Emergency",
-"recommended_action": ""
+"recommended_action": "מה בעל החתול צריך לעשות"
 }
 
 סימפטומים:
@@ -63,7 +64,8 @@ ${text}
           messages: [
             {
               role: "system",
-              content: "You are a veterinary AI that diagnoses cat symptoms."
+              content:
+                "You are a veterinary AI specialized only in cat health and symptoms."
             },
             {
               role: "user",
@@ -82,28 +84,35 @@ ${text}
       return res.status(500).json(data);
     }
 
-    let output = data?.choices?.[0]?.message?.content || "{}";
+    const raw = data?.choices?.[0]?.message?.content || "";
+
+    let parsed;
 
     try {
-      output = JSON.parse(output);
+      parsed = JSON.parse(raw);
     } catch {
-      output = { raw: output };
+      parsed = {
+        title: "אבחון חתולים",
+        possible_causes: [],
+        urgency_level: "Low",
+        recommended_action: raw
+      };
     }
 
-    res.json(output);
-
-  } catch (err) {
-
-    console.error("🔥 Server error:", err);
-
-    res.status(500).json({
-      error: err.message
+    // מחזיר גם JSON מובנה וגם result טקסטואלי לתאימות לאתר הישן
+    res.json({
+      result: raw,
+      title: parsed.title,
+      possible_causes: parsed.possible_causes,
+      urgency_level: parsed.urgency_level,
+      recommended_action: parsed.recommended_action
     });
-
+  } catch (err) {
+    console.error("🔥 Server error:", err);
+    res.status(500).json({ error: err.message });
   }
-
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 CATMIND PRO AI ACTIVE - MODEL:", MODEL);
+  console.log("🐱 CATMIND AI ACTIVE - MODEL:", MODEL);
 });
