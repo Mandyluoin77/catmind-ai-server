@@ -11,7 +11,9 @@ app.use(cors());
 app.use(express.json());
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const MODEL = "llama3-70b-8192"; // Llama 3 70B on Groq
+
+// מודל נתמך ב-Groq
+const MODEL = "llama-3.1-8b-instant";
 
 if (!GROQ_API_KEY) {
   console.error("❌ GROQ_API_KEY missing!");
@@ -60,7 +62,7 @@ app.post("/generate", async (req, res) => {
           messages: [
             {
               role: "system",
-              content: "You are a veterinary expert that analyzes cat symptoms only."
+              content: "You are a veterinary AI that analyzes cat symptoms only."
             },
             {
               role: "user",
@@ -80,8 +82,7 @@ app.post("/generate", async (req, res) => {
     }
 
     const output =
-      data.choices?.[0]?.message?.content ||
-      "No response";
+      data?.choices?.[0]?.message?.content || "No response";
 
     res.json({ result: output });
 
