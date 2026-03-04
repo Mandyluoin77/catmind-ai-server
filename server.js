@@ -4,22 +4,22 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE");
+console.log("🚀 CATMIND STRICT CAT MODE (GROQ)");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const MODEL = "gemini-2.5-flash";
+const GROQ_API_KEY = process.env.GROQ_API_KEY;
+const MODEL = "llama3-70b-8192"; // Llama 3 70B on Groq
 
-if (!GEMINI_API_KEY) {
-  console.error("❌ GEMINI_API_KEY missing!");
+if (!GROQ_API_KEY) {
+  console.error("❌ GROQ_API_KEY missing!");
   process.exit(1);
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – STRICT CAT MODE 🐱");
+  res.send("CATMIND AI – STRICT CAT MODE 🐱 (GROQ)");
 });
 
 app.post("/generate", async (req, res) => {
@@ -48,19 +48,26 @@ app.post("/generate", async (req, res) => {
 `;
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent?key=${GEMINI_API_KEY}`,
+      "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${GROQ_API_KEY}`
         },
         body: JSON.stringify({
-          contents: [
+          model: MODEL,
+          messages: [
+            {
+              role: "system",
+              content: "You are a veterinary expert that analyzes cat symptoms only."
+            },
             {
               role: "user",
-              parts: [{ text: strictPrompt }]
+              content: strictPrompt
             }
-          ]
+          ],
+          temperature: 0.3
         })
       }
     );
@@ -68,12 +75,12 @@ app.post("/generate", async (req, res) => {
     const data = await response.json();
 
     if (!response.ok) {
-      console.error("❌ Gemini Error:", data);
+      console.error("❌ Groq Error:", data);
       return res.status(500).json(data);
     }
 
     const output =
-      data.candidates?.[0]?.content?.parts?.[0]?.text ||
+      data.choices?.[0]?.message?.content ||
       "No response";
 
     res.json({ result: output });
@@ -85,5 +92,5 @@ app.post("/generate", async (req, res) => {
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 STRICT CAT GEMINI ACTIVE - MODEL:", MODEL);
+  console.log("🐱 STRICT CAT AI ACTIVE - MODEL:", MODEL);
 });
