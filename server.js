@@ -4,7 +4,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE (GROQ)");
+console.log("🚀 CATMIND STRICT CAT MODE");
 
 const app = express();
 app.use(cors());
@@ -19,7 +19,7 @@ if (!GROQ_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – STRICT CAT MODE 🐱 (GROQ)");
+  res.send("CATMIND AI – ONLINE 🐱");
 });
 
 app.post("/generate", async (req, res) => {
@@ -30,22 +30,15 @@ app.post("/generate", async (req, res) => {
       return res.status(400).json({ error: "Missing text" });
     }
 
-    const strictPrompt = `
-אתה וטרינר קליני מומחה לחתולים בלבד.
+    const prompt = `
+אתה וטרינר מומחה לחתולים בלבד.
 
-חוקים:
-- התייחס רק לחתולים.
-- אם המידע לא מספיק ציין זאת.
-- אל תדבר על בני אדם.
+ענה בפורמט הבא בלבד:
 
-החזר תשובה בפורמט JSON בלבד:
-
-{
-"title": "שם הבעיה אצל חתולים",
-"possible_causes": ["גורם 1","גורם 2","גורם 3"],
-"urgency_level": "Low | Medium | High | Emergency",
-"recommended_action": "מה בעל החתול צריך לעשות"
-}
+כותרת:
+גורמים אפשריים:
+רמת דחיפות:
+מה מומלץ לעשות:
 
 סימפטומים:
 ${text}
@@ -65,14 +58,14 @@ ${text}
             {
               role: "system",
               content:
-                "You are a veterinary AI specialized only in cat health and symptoms."
+                "You are a veterinary AI specialized only in cat health."
             },
             {
               role: "user",
-              content: strictPrompt
+              content: prompt
             }
           ],
-          temperature: 0.2
+          temperature: 0.3
         })
       }
     );
@@ -84,29 +77,11 @@ ${text}
       return res.status(500).json(data);
     }
 
-    const raw = data?.choices?.[0]?.message?.content || "";
+    const output =
+      data?.choices?.[0]?.message?.content || "לא נמצאה תשובה";
 
-    let parsed;
+    res.json({ result: output });
 
-    try {
-      parsed = JSON.parse(raw);
-    } catch {
-      parsed = {
-        title: "אבחון חתולים",
-        possible_causes: [],
-        urgency_level: "Low",
-        recommended_action: raw
-      };
-    }
-
-    // מחזיר גם JSON מובנה וגם result טקסטואלי לתאימות לאתר הישן
-    res.json({
-      result: raw,
-      title: parsed.title,
-      possible_causes: parsed.possible_causes,
-      urgency_level: parsed.urgency_level,
-      recommended_action: parsed.recommended_action
-    });
   } catch (err) {
     console.error("🔥 Server error:", err);
     res.status(500).json({ error: err.message });
