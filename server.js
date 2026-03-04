@@ -4,15 +4,13 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE (GROQ)");
+console.log("🚀 CATMIND PRO MODE");
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
-
-// מודל נתמך ב-Groq
 const MODEL = "llama-3.1-8b-instant";
 
 if (!GROQ_API_KEY) {
@@ -21,11 +19,13 @@ if (!GROQ_API_KEY) {
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – STRICT CAT MODE 🐱 (GROQ)");
+  res.send("CATMIND AI PRO 🐱");
 });
 
 app.post("/generate", async (req, res) => {
+
   try {
+
     const { text } = req.body;
 
     if (!text) {
@@ -33,20 +33,21 @@ app.post("/generate", async (req, res) => {
     }
 
     const strictPrompt = `
-אתה וטרינר קליני מומחה לחתולים בלבד.
+אתה וטרינר מומחה לחתולים בלבד.
 
-חוקי חובה:
-- אסור להתייחס לבני אדם.
-- אם המונח רפואי כללי – התייחס אליו בהקשר של חתול בלבד.
-- אם אינך בטוח – ציין שמדובר בהקשר וטרינרי של חתולים.
+נתח את הסימפטומים.
 
-פורמט חובה:
-כותרת: <שם הסימפטום אצל חתולים>
-גורמים אפשריים:
-רמת דחיפות:
-מה מומלץ לעשות:
+החזר JSON בלבד:
 
-שאלה: ${text}
+{
+"title": "",
+"possible_causes": [],
+"urgency_level": "Low | Medium | High | Emergency",
+"recommended_action": ""
+}
+
+סימפטומים:
+${text}
 `;
 
     const response = await fetch(
@@ -55,21 +56,21 @@ app.post("/generate", async (req, res) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${GROQ_API_KEY}`
+          Authorization: `Bearer ${GROQ_API_KEY}`
         },
         body: JSON.stringify({
           model: MODEL,
           messages: [
             {
               role: "system",
-              content: "You are a veterinary AI that analyzes cat symptoms only."
+              content: "You are a veterinary AI that diagnoses cat symptoms."
             },
             {
               role: "user",
               content: strictPrompt
             }
           ],
-          temperature: 0.3
+          temperature: 0.2
         })
       }
     );
@@ -81,17 +82,28 @@ app.post("/generate", async (req, res) => {
       return res.status(500).json(data);
     }
 
-    const output =
-      data?.choices?.[0]?.message?.content || "No response";
+    let output = data?.choices?.[0]?.message?.content || "{}";
 
-    res.json({ result: output });
+    try {
+      output = JSON.parse(output);
+    } catch {
+      output = { raw: output };
+    }
+
+    res.json(output);
 
   } catch (err) {
+
     console.error("🔥 Server error:", err);
-    res.status(500).json({ error: err.message });
+
+    res.status(500).json({
+      error: err.message
+    });
+
   }
+
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 STRICT CAT AI ACTIVE - MODEL:", MODEL);
+  console.log("🐱 CATMIND PRO AI ACTIVE - MODEL:", MODEL);
 });
