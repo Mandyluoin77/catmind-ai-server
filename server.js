@@ -19,9 +19,9 @@ if (!GROQ_API_KEY) {
   process.exit(1);
 }
 
-/* -----------------------------
-   SIMPLE MEMORY CACHE
------------------------------ */
+/* -------------------------
+   CACHE
+-------------------------- */
 
 const cache = new Map();
 const CACHE_TIME = 1000 * 60 * 10;
@@ -29,10 +29,12 @@ const CACHE_TIME = 1000 * 60 * 10;
 function getCache(key) {
   const item = cache.get(key);
   if (!item) return null;
+
   if (Date.now() > item.expire) {
     cache.delete(key);
     return null;
   }
+
   return item.value;
 }
 
@@ -43,9 +45,9 @@ function setCache(key, value) {
   });
 }
 
-/* -----------------------------
+/* -------------------------
    ROUTES
------------------------------ */
+-------------------------- */
 
 app.get("/", (req, res) => {
   res.send("CATMIND AI – ONLINE 🐱");
@@ -59,12 +61,14 @@ app.get("/health", (req, res) => {
   });
 });
 
-/* -----------------------------
-   MAIN AI ENDPOINT
------------------------------ */
+/* -------------------------
+   AI ENDPOINT
+-------------------------- */
 
 app.post("/generate", async (req, res) => {
+
   try {
+
     let { text } = req.body;
 
     if (!text) {
@@ -76,6 +80,7 @@ app.post("/generate", async (req, res) => {
     text = text.slice(0, 600);
 
     const cached = getCache(text);
+
     if (cached) {
       return res.json({
         result: cached,
@@ -84,16 +89,20 @@ app.post("/generate", async (req, res) => {
     }
 
     const prompt = `
-אתה וטרינר מומחה לחתולים בלבד.
+אתה וטרינר מומחה לחתולים בלבד עם ניסיון של 20 שנה.
 
-ענה בעברית בפורמט הבא בלבד:
+ענה בעברית בלבד בפורמט הבא:
 
 כותרת:
 גורמים אפשריים:
-רמת דחיפות: נמוכה / בינונית / גבוהה
+רמת דחיפות: נמוכה / בינונית / גבוהה / חירום
 מה מומלץ לעשות:
+מתי לפנות לוטרינר:
 
-אם הסימפטומים מסוכנים ציין שיש לפנות לוטרינר.
+כללים:
+- אל תחזור על אותה המלצה פעמיים
+- עד 5 נקודות בלבד
+- תשובה קצרה וברורה
 
 סימפטומים:
 ${text}
@@ -117,7 +126,7 @@ ${text}
             {
               role: "system",
               content:
-                "You are a professional veterinary AI that specializes only in cats."
+                "You are a veterinary AI specializing only in cat health."
             },
             {
               role: "user",
@@ -136,14 +145,28 @@ ${text}
 
     if (!response.ok) {
       console.error("❌ Groq Error:", data);
+
       return res.status(500).json({
         error: "AI service error"
       });
     }
 
-    const output =
-      data?.choices?.[0]?.message?.content ||
-      "לא נמצאה תשובה.";
+    let output =
+      data?.choices?.[0]?.message?.content || "לא נמצאה תשובה";
+
+    /* -------------------------
+       CLEAN DUPLICATE LINES
+    -------------------------- */
+
+    const lines = output.split("\n");
+
+    const uniqueLines = [...new Set(lines)];
+
+    output = uniqueLines.join("\n");
+
+    /* -------------------------
+       SAVE CACHE
+    -------------------------- */
 
     setCache(text, output);
 
@@ -166,16 +189,19 @@ ${text}
       error: "Server error"
     });
   }
+
 });
 
-/* -----------------------------
-   SERVER START
------------------------------ */
+/* -------------------------
+   START SERVER
+-------------------------- */
 
 const PORT = process.env.PORT || 10000;
 
 app.listen(PORT, () => {
+
   console.log("🐱 CATMIND AI ACTIVE");
   console.log("MODEL:", MODEL);
   console.log("PORT:", PORT);
+
 });
