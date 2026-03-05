@@ -1,207 +1,76 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
+const button = document.getElementById("generateBtn");
+const input = document.getElementById("symptomsInput");
+const resultBox = document.getElementById("resultBox");
 
-dotenv.config();
+button.addEventListener("click", async () => {
 
-console.log("🚀 CATMIND STRICT CAT MODE");
-
-const app = express();
-
-app.use(cors());
-app.use(express.json({ limit: "1mb" }));
-
-const GROQ_API_KEY = process.env.GROQ_API_KEY;
-const MODEL = "llama-3.1-8b-instant";
-
-if (!GROQ_API_KEY) {
-  console.error("❌ GROQ_API_KEY missing!");
-  process.exit(1);
-}
-
-/* -------------------------
-   CACHE
--------------------------- */
-
-const cache = new Map();
-const CACHE_TIME = 1000 * 60 * 10;
-
-function getCache(key) {
-  const item = cache.get(key);
-  if (!item) return null;
-
-  if (Date.now() > item.expire) {
-    cache.delete(key);
-    return null;
-  }
-
-  return item.value;
-}
-
-function setCache(key, value) {
-  cache.set(key, {
-    value,
-    expire: Date.now() + CACHE_TIME
-  });
-}
-
-/* -------------------------
-   ROUTES
--------------------------- */
-
-app.get("/", (req, res) => {
-  res.send("CATMIND AI – ONLINE 🐱");
-});
-
-app.get("/health", (req, res) => {
-  res.json({
-    status: "ok",
-    model: MODEL,
-    time: new Date()
-  });
-});
-
-/* -------------------------
-   AI ENDPOINT
--------------------------- */
-
-app.post("/generate", async (req, res) => {
-
-  try {
-
-    let { text } = req.body;
+    const text = input.value.trim();
 
     if (!text) {
-      return res.status(400).json({
-        error: "Missing text"
-      });
+        resultBox.innerHTML = "אנא הכנס סימפטומים.";
+        return;
     }
 
-    text = text.slice(0, 600);
+    resultBox.innerHTML = "🔎 CatMind מנתח את הסימפטומים...";
 
-    const cached = getCache(text);
+    try {
 
-    if (cached) {
-      return res.json({
-        result: cached,
-        cached: true
-      });
-    }
-
-    const prompt = `
-אתה וטרינר מומחה לחתולים בלבד עם ניסיון של 20 שנה.
-
-ענה בעברית בלבד בפורמט הבא:
-
-כותרת:
-גורמים אפשריים:
-רמת דחיפות: נמוכה / בינונית / גבוהה / חירום
-מה מומלץ לעשות:
-מתי לפנות לוטרינר:
-
-כללים:
-- אל תחזור על אותה המלצה פעמיים
-- עד 5 נקודות בלבד
-- תשובה קצרה וברורה
-
-סימפטומים:
-${text}
-`;
-
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000);
-
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
-        signal: controller.signal,
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${GROQ_API_KEY}`
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are a veterinary AI specializing only in cat health."
+        const response = await fetch("/generate", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
             },
-            {
-              role: "user",
-              content: prompt
-            }
-          ],
-          temperature: 0.3,
-          max_tokens: 500
-        })
-      }
-    );
+            body: JSON.stringify({ text })
+        });
 
-    clearTimeout(timeout);
+        const data = await response.json();
 
-    const data = await response.json();
+        if (!data.result) {
+            resultBox.innerHTML = "לא התקבלה תשובה.";
+            return;
+        }
 
-    if (!response.ok) {
-      console.error("❌ Groq Error:", data);
+        /* אם השרת מחזיר JSON */
 
-      return res.status(500).json({
-        error: "AI service error"
-      });
+        if (typeof data.result === "object") {
+
+            const r = data.result;
+
+            resultBox.innerHTML = `
+            <h3>${r.title || ""}</h3>
+
+            <b>רמת דחיפות:</b> ${r.urgency || ""}<br><br>
+
+            <b>גורמים אפשריים:</b>
+            <ul>
+            ${(r.possible_causes || []).map(c => `<li>${c}</li>`).join("")}
+            </ul>
+
+            <b>מה מומלץ לעשות:</b>
+            <ul>
+            ${(r.recommended_actions || []).map(a => `<li>${a}</li>`).join("")}
+            </ul>
+
+            <b>מתי לפנות לוטרינר:</b><br>
+            ${r.when_to_see_vet || ""}
+            `;
+
+        } else {
+
+            /* אם השרת מחזיר טקסט רגיל */
+
+            resultBox.innerHTML =
+                data.result.replace(/\n/g, "<br>");
+
+        }
+
+    } catch (err) {
+
+        console.error(err);
+
+        resultBox.innerHTML =
+            "❌ שגיאה בחיבור לשרת.";
+
     }
-
-    let output =
-      data?.choices?.[0]?.message?.content || "לא נמצאה תשובה";
-
-    /* -------------------------
-       CLEAN DUPLICATE LINES
-    -------------------------- */
-
-    const lines = output.split("\n");
-
-    const uniqueLines = [...new Set(lines)];
-
-    output = uniqueLines.join("\n");
-
-    /* -------------------------
-       SAVE CACHE
-    -------------------------- */
-
-    setCache(text, output);
-
-    res.json({
-      result: output,
-      model: MODEL
-    });
-
-  } catch (err) {
-
-    console.error("🔥 Server error:", err);
-
-    if (err.name === "AbortError") {
-      return res.status(504).json({
-        error: "AI timeout"
-      });
-    }
-
-    res.status(500).json({
-      error: "Server error"
-    });
-  }
-
-});
-
-/* -------------------------
-   START SERVER
--------------------------- */
-
-const PORT = process.env.PORT || 10000;
-
-app.listen(PORT, () => {
-
-  console.log("🐱 CATMIND AI ACTIVE");
-  console.log("MODEL:", MODEL);
-  console.log("PORT:", PORT);
 
 });
