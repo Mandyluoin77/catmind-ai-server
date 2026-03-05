@@ -4,8 +4,6 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-console.log("🚀 CATMIND STRICT CAT MODE");
-
 const app = express();
 app.use(cors());
 app.use(express.json());
@@ -14,12 +12,12 @@ const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL = "llama-3.1-8b-instant";
 
 if (!GROQ_API_KEY) {
-  console.error("❌ GROQ_API_KEY missing!");
+  console.error("Missing GROQ_API_KEY");
   process.exit(1);
 }
 
 app.get("/", (req, res) => {
-  res.send("CATMIND AI – ONLINE 🐱");
+  res.send("CATMIND AI ONLINE");
 });
 
 app.post("/generate", async (req, res) => {
@@ -35,12 +33,11 @@ app.post("/generate", async (req, res) => {
     const prompt = `
 אתה וטרינר מומחה לחתולים בלבד.
 
-נתח רק את הסימפטום הבא.
+נתח את הסימפטום הבא בלבד:
 
-סימפטום:
 ${text}
 
-ענה בדיוק בפורמט:
+ענה בעברית בפורמט:
 
 כותרת:
 גורמים אפשריים:
@@ -61,25 +58,19 @@ ${text}
           messages: [
             {
               role: "system",
-              content:
-                "You are a veterinary AI specialized ONLY in cat health. Answer only about the symptom given."
+              content: "You are a veterinary AI specialized ONLY in cats."
             },
             {
               role: "user",
               content: prompt
             }
           ],
-          temperature: 0.2
+          temperature: 0.3
         })
       }
     );
 
     const data = await response.json();
-
-    if (!response.ok) {
-      console.error("❌ Groq Error:", data);
-      return res.status(500).json(data);
-    }
 
     const output =
       data?.choices?.[0]?.message?.content || "לא נמצאה תשובה";
@@ -88,11 +79,10 @@ ${text}
 
   } catch (err) {
 
-    console.error("🔥 Server error:", err);
+    console.error(err);
 
     res.status(500).json({
-      error: "Server error",
-      details: err.message
+      error: "Server error"
     });
 
   }
@@ -100,5 +90,5 @@ ${text}
 });
 
 app.listen(process.env.PORT || 10000, () => {
-  console.log("🐱 CATMIND AI ACTIVE - MODEL:", MODEL);
+  console.log("CATMIND SERVER RUNNING");
 });
