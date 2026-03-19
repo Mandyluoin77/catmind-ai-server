@@ -4,8 +4,15 @@ import dotenv from "dotenv";
 dotenv.config();
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
+
+// 👇 זה כבר אצלך וזה מצוין
+app.use((req, res, next) => {
+  console.log("👉", req.method, req.url);
+  next();
+});
 
 const GROQ_API_KEY = process.env.GROQ_API_KEY;
 const MODEL = "llama-3.3-70b-versatile"; // שדרוג מ-8b ל-70b — הרבה יותר מדויק
